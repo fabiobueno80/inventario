@@ -1,0 +1,121 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventário Fabio</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; padding: 0; }
+    h1 { text-align: center; }
+    select, input, button { padding: 8px; margin: 5px 0; width: 100%; max-width: 400px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    #reader { width: 100%; max-width: 400px; margin: auto; }
+    .container { display: flex; flex-direction: column; align-items: center; }
+  </style>
+</head>
+<body>
+  <h1>Inventário Fabio</h1>
+  <div class="container">
+    <div id="reader"></div>
+    <label>Material (via QR):</label>
+    <input type="text" id="material" readonly>
+    
+    <label>Local da contagem:</label>
+    <select id="local">
+      <option value="Almoxarifado">Almoxarifado</option>
+      <option value="Oficina">Oficina</option>
+      <option value="Unidade 1">Unidade 1</option>
+      <option value="Unidade 2">Unidade 2</option>
+    </select>
+    
+    <label>Responsável:</label>
+    <select id="responsavel">
+      <option value="Fabio">Fabio</option>
+      <option value="João">João</option>
+      <option value="Maria">Maria</option>
+    </select>
+    
+    <label>Quantidade:</label>
+    <input type="number" id="quantidade" min="1">
+    
+    <button onclick="salvarContagem()">Salvar contagem</button>
+    <button onclick="exportarExcel()">Exportar para Excel</button>
+
+    <table id="tabela">
+      <thead>
+        <tr><th>Data</th><th>Material</th><th>Local</th><th>Responsável</th><th>Quantidade</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+  <script>
+    const html5QrCode = new Html5Qrcode("reader");
+    Html5Qrcode.getCameras().then(devices => {
+      if (devices.length) {
+        html5QrCode.start({ facingMode: "environment" }, {
+          fps: 10, qrbox: 250
+        }, qrCodeMessage => {
+          document.getElementById("material").value = qrCodeMessage;
+        });
+      }
+    });
+
+    let historico = [];
+
+    function salvarContagem() {
+      const data = new Date().toLocaleString();
+      const material = document.getElementById("material").value;
+      const local = document.getElementById("local").value;
+      const responsavel = document.getElementById("responsavel").value;
+      const quantidade = document.getElementById("quantidade").value;
+
+      if (!material || !quantidade) {
+        alert("Preencha o QR Code e a quantidade.");
+        return;
+      }
+
+      const registro = { data, material, local, responsavel, quantidade };
+      historico.push(registro);
+      atualizarTabela();
+      limparCampos();
+    }
+
+    function atualizarTabela() {
+      const tbody = document.querySelector("#tabela tbody");
+      tbody.innerHTML = "";
+      historico.forEach(item => {
+        const row = `<tr>
+          <td>${item.data}</td>
+          <td>${item.material}</td>
+          <td>${item.local}</td>
+          <td>${item.responsavel}</td>
+          <td>${item.quantidade}</td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    function limparCampos() {
+      document.getElementById("material").value = "";
+      document.getElementById("quantidade").value = "";
+    }
+
+    function exportarExcel() {
+      let csv = "Data,Material,Local,Responsável,Quantidade\n";
+      historico.forEach(item => {
+        csv += `${item.data},${item.material},${item.local},${item.responsavel},${item.quantidade}\n`;
+      });
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "inventario.csv";
+      a.click();
+    }
+  </script>
+</body>
+</html>
